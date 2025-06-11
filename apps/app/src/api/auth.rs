@@ -1,7 +1,6 @@
 use crate::api::Result;
-use chrono::{Duration, Utc};
 use tauri::plugin::TauriPlugin;
-use tauri::{Manager, Runtime, UserAttentionType};
+use tauri::Runtime;
 use theseus::prelude::*;
 
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
@@ -19,63 +18,19 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 /// Authenticate a user with Hydra - part 1
 /// This begins the authentication flow quasi-synchronously, returning a URL to visit (that the user will sign in at)
 #[tauri::command]
-pub async fn login<R: Runtime>(
-    app: tauri::AppHandle<R>,
+pub async fn login(
+    cracked_username: String,
+    cracked_uuid: Option<uuid::Uuid>,
 ) -> Result<Option<Credentials>> {
+    println!("received {cracked_username} uuid {cracked_uuid:#?}");
+
     let flow = minecraft_auth::begin_login().await?;
 
-    let start = Utc::now();
+    let val =
+        minecraft_auth::finish_login("", flow, cracked_username, cracked_uuid)
+            .await?;
 
-    if let Some(window) = app.get_webview_window("signin") {
-        window.close()?;
-    }
-
-    let window = tauri::WebviewWindowBuilder::new(
-        &app,
-        "signin",
-        tauri::WebviewUrl::External(flow.redirect_uri.parse().map_err(
-            |_| {
-                theseus::ErrorKind::OtherError(
-                    "Error parsing auth redirect URL".to_string(),
-                )
-                .as_error()
-            },
-        )?),
-    )
-    .title("Sign into Modrinth")
-    .always_on_top(true)
-    .center()
-    .build()?;
-
-    window.request_user_attention(Some(UserAttentionType::Critical))?;
-
-    while (Utc::now() - start) < Duration::minutes(10) {
-        if window.title().is_err() {
-            // user closed window, cancelling flow
-            return Ok(None);
-        }
-
-        if window
-            .url()?
-            .as_str()
-            .starts_with("https://login.live.com/oauth20_desktop.srf")
-        {
-            if let Some((_, code)) =
-                window.url()?.query_pairs().find(|x| x.0 == "code")
-            {
-                window.close()?;
-                let val =
-                    minecraft_auth::finish_login(&code.clone(), flow).await?;
-
-                return Ok(Some(val));
-            }
-        }
-
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
-
-    window.close()?;
-    Ok(None)
+    Ok(Some(val))
 }
 #[tauri::command]
 pub async fn remove_user(user: uuid::Uuid) -> Result<()> {

@@ -31,33 +31,55 @@
         <Avatar size="xs" :src="`https://mc-heads.net/avatar/${selectedAccount.id}/128`" />
         <div>
           <h4>{{ selectedAccount.username }}</h4>
-          <p>Selected</p>
+          <p>{{ selectedAccount.id }}</p>
         </div>
         <Button v-tooltip="'Log out'" icon-only color="raised" @click="logout(selectedAccount.id)">
           <TrashIcon />
-        </Button>
-      </div>
-      <div v-else class="logged-out account">
-        <h4>Not signed in</h4>
-        <Button v-tooltip="'Log in'" icon-only color="primary" @click="login()">
-          <LogInIcon />
         </Button>
       </div>
       <div v-if="displayAccounts.length > 0" class="account-group">
         <div v-for="account in displayAccounts" :key="account.id" class="account-row">
           <Button class="option account" @click="setAccount(account)">
             <Avatar :src="`https://mc-heads.net/avatar/${account.id}/128`" class="icon" />
-            <p>{{ account.username }}</p>
+            <div class="account-info">
+              <p>{{ account.username }}</p>
+              <span>{{ account.id }}</span>
+            </div>
           </Button>
           <Button v-tooltip="'Log out'" icon-only @click="logout(account.id)">
             <TrashIcon />
           </Button>
         </div>
       </div>
-      <Button v-if="accounts.length > 0" @click="login()">
-        <PlusIcon />
-        Add account
-      </Button>
+      <div class="logged-out account">
+        <div>
+          <h4 v-if="accounts.length > 0">Add account</h4>
+          <h4 v-else>Not signed in</h4>
+          <Button
+            v-tooltip="'Log in'"
+            icon-only
+            :color="`${accounts.length > 0 ? undefined : 'primary'}`"
+            @click="login()"
+          >
+            <PlusIcon v-if="accounts.length > 0" />
+            <LogInIcon v-else />
+          </Button>
+        </div>
+        <input
+          v-model="crackedUsername"
+          type="text"
+          placeholder="Username"
+          class="input"
+          required
+        />
+        <input
+          v-model="crackedUuid"
+          type="text"
+          placeholder="UUID"
+          class="input"
+          pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+        />
+      </div>
     </Card>
   </transition>
 </template>
@@ -90,6 +112,8 @@ const emit = defineEmits(['change'])
 
 const accounts = ref({})
 const defaultUser = ref()
+const crackedUsername = ref('')
+const crackedUuid = ref(null)
 
 async function refreshValues() {
   defaultUser.value = await get_default_user().catch(handleError)
@@ -115,7 +139,13 @@ async function setAccount(account) {
 }
 
 async function login() {
-  const loggedIn = await login_flow().catch(handleSevereError)
+  const loggedIn = await login_flow(
+    crackedUsername.value,
+    crackedUuid.value == '' ? null : crackedUuid.value,
+  ).catch(handleSevereError)
+
+  crackedUsername.value = ''
+  crackedUuid.value = ''
 
   if (loggedIn) {
     await setAccount(loggedIn)
@@ -191,6 +221,23 @@ onUnmounted(() => {
   background: var(--color-bg);
   border-radius: var(--radius-lg);
   gap: 1rem;
+  flex-direction: column;
+  width: 100% !important;
+  padding-bottom: 1rem !important;
+
+  div {
+    display: flex;
+    width: 100%;
+    align-items: center;
+
+    h4 {
+      flex-grow: 2;
+    }
+  }
+
+  input {
+    width: 100%;
+  }
 }
 
 .account {
@@ -278,10 +325,20 @@ onUnmounted(() => {
 .account-row {
   display: flex;
   flex-direction: row;
-  gap: 0.5rem;
-  vertical-align: center;
+  gap: 1rem;
+  align-items: center;
   justify-content: space-between;
   padding-right: 1rem;
+}
+
+.account-info {
+  display: flex;
+  flex-direction: column;
+
+  span {
+    font-size: 0.75rem;
+    font-weight: normal;
+  }
 }
 
 .fade-enter-active,

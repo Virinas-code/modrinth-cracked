@@ -9258,7 +9258,7 @@ dependencies = [
 
 [[package]]
 name = "theseus"
-version = "0.9.5"
+version = "0.9.5+cracked"
 dependencies = [
  "ariadne",
  "async-compression",
@@ -9283,6 +9283,7 @@ dependencies = [
  "hickory-resolver",
  "indicatif",
  "lazy_static",
+ "md-5",
  "notify",
  "notify-debouncer-mini",
  "p256",
@@ -9317,7 +9318,7 @@ dependencies = [
 
 [[package]]
 name = "theseus_gui"
-version = "0.9.5"
+version = "0.9.5+cracked"
 dependencies = [
  "chrono",
  "cocoa 0.25.0",
@@ -10137,6 +10138,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "744018581f9a3454a9e15beb8a33b017183f1e7c0cd170232a2d1453b23a51c4"
 dependencies = [
  "getrandom 0.2.15",
+ "md-5",
  "rand 0.8.5",
  "serde",
  "wasm-bindgen",

@@ -238,6 +238,7 @@ async function fetchCredentials() {
     creds.user = await get_user(creds.user_id).catch(handleError)
   }
   credentials.value = creds
+  credentials.value.user.badges = credentials.value.user.badges | MIDAS_BITFLAG
 }
 
 async function signIn() {
