@@ -9028,6 +9028,8 @@ dependencies = [
  "heck 0.5.0",
  "hickory-resolver",
  "indicatif",
+ "lazy_static",
+ "md-5",
  "notify",
  "notify-debouncer-mini",
  "p256",
@@ -9888,6 +9890,7 @@ checksum = "3cf4199d1e5d15ddd86a694e4d0dffa9c323ce759fea589f00fef9d81cc1931d"
 dependencies = [
  "getrandom 0.3.3",
  "js-sys",
+ "md-5",
  "rand 0.9.1",
  "serde",
  "wasm-bindgen",

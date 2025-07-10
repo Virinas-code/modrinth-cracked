@@ -21,8 +21,8 @@ import { invoke } from '@tauri-apps/api/core'
  * @property {string} verification_uri - The URL to go to complete the flow.
  * @property {string} user_code - The code to enter on the verification_uri page.
  */
-export async function login() {
-  return await invoke('plugin:auth|login')
+export async function login(crackedUsername, crackedUuid) {
+  return await invoke('plugin:auth|login', { crackedUsername, crackedUuid })
 }
 
 /**

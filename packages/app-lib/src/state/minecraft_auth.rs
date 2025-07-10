@@ -158,38 +158,37 @@ pub async fn login_finish(
     code: &str,
     flow: MinecraftLoginFlow,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
+    cracked_username: String,
+    cracked_uuid: Option<uuid::Uuid>,
 ) -> crate::Result<Credentials> {
-    let (pair, _, _) =
+    fn hash(src: &[u8]) -> [u8; 16] {
+        use md5::{Digest, Md5};
+
+        let mut hasher = Md5::new();
+
+        hasher.update(src);
+
+        let mut bytes = [0; 16];
+        bytes.copy_from_slice(&hasher.finalize()[..16]);
+
+        bytes
+    }
+
+    let (_pair, _, _) =
         DeviceTokenPair::refresh_and_get_device_token(Utc::now(), false, exec)
             .await?;
 
-    let oauth_token = oauth_token(code, &flow.verifier).await?;
-    let sisu_authorize = sisu_authorize(
-        Some(&flow.session_id),
-        &oauth_token.value.access_token,
-        &pair.token.token,
-        &pair.key,
-        oauth_token.date,
-    )
-    .await?;
-
-    let xbox_token = xsts_authorize(
-        sisu_authorize.value,
-        &pair.token.token,
-        &pair.key,
-        sisu_authorize.date,
-    )
-    .await?;
-    let minecraft_token = minecraft_token(xbox_token.value).await?;
-
-    minecraft_entitlements(&minecraft_token.access_token).await?;
-
     let mut credentials = Credentials {
-        offline_profile: MinecraftProfile::default(),
-        access_token: minecraft_token.access_token,
-        refresh_token: oauth_token.value.refresh_token,
-        expires: oauth_token.date
-            + Duration::seconds(oauth_token.value.expires_in as i64),
+        id: cracked_uuid.unwrap_or_else(|| {
+            uuid::Builder::from_md5_bytes(hash(
+                ("OfflinePlayer:".to_owned() + &cracked_username).as_bytes(),
+            ))
+            .into_uuid()
+        }),
+        username: cracked_username,
+        access_token: String::from("{MINECRAFT_ACCESS_TOKEN}"),
+        refresh_token: String::default(),
+        expires: DateTime::<Utc>::MAX_UTC,
         active: true,
     };
 

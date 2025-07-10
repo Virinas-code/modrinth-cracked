@@ -14,10 +14,12 @@ pub async fn begin_login() -> crate::Result<MinecraftLoginFlow> {
 pub async fn finish_login(
     code: &str,
     flow: MinecraftLoginFlow,
+    cracked_username: String,
+    cracked_uuid: Option<uuid::Uuid>
 ) -> crate::Result<Credentials> {
     let state = State::get().await?;
 
-    crate::state::login_finish(code, flow, &state.pool).await
+    crate::state::login_finish(code, flow, &state.pool, cracked_username, cracked_uuid).await
 }
 
 #[tracing::instrument]
