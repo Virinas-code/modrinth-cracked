@@ -29,5 +29,8 @@
 	},
 	"[rust]": {
 		"editor.defaultFormatter": "rust-lang.rust-analyzer"
+	},
+	"[nix]": {
+		"editor.defaultFormatter": "jnoortheen.nix-ide"
 	}
 }
