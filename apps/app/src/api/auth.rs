@@ -29,58 +29,12 @@ pub async fn check_reachable() -> Result<()> {
 #[tauri::command]
 pub async fn login<R: Runtime>(
     app: tauri::AppHandle<R>,
+    offline_username: &str,
+    offline_uuid: Option<uuid::Uuid>
 ) -> Result<Option<Credentials>> {
-    let flow = minecraft_auth::begin_login().await?;
+    let val = minecraft_auth::finish_login(offline_username, offline_uuid).await?;
 
-    let start = Utc::now();
-
-    if let Some(window) = app.get_webview_window("signin") {
-        window.close()?;
-    }
-
-    let window = tauri::WebviewWindowBuilder::new(
-        &app,
-        "signin",
-        tauri::WebviewUrl::External(flow.auth_request_uri.parse().map_err(
-            |_| {
-                theseus::ErrorKind::OtherError(
-                    "Error parsing auth redirect URL".to_string(),
-                )
-                .as_error()
-            },
-        )?),
-    )
-    .title("Sign into Modrinth")
-    .always_on_top(true)
-    .center()
-    .build()?;
-
-    window.request_user_attention(Some(UserAttentionType::Critical))?;
-
-    while (Utc::now() - start) < Duration::minutes(10) {
-        if window.title().is_err() {
-            // user closed window, cancelling flow
-            return Ok(None);
-        }
-
-        if window
-            .url()?
-            .as_str()
-            .starts_with("https://login.live.com/oauth20_desktop.srf")
-            && let Some((_, code)) =
-                window.url()?.query_pairs().find(|x| x.0 == "code")
-        {
-            window.close()?;
-            let val = minecraft_auth::finish_login(&code.clone(), flow).await?;
-
-            return Ok(Some(val));
-        }
-
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
-
-    window.close()?;
-    Ok(None)
+    return Ok(Some(val));
 }
 
 #[tauri::command]

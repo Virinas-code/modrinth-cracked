@@ -28,12 +28,12 @@ pub async fn begin_login() -> crate::Result<MinecraftLoginFlow> {
 
 #[tracing::instrument]
 pub async fn finish_login(
-    code: &str,
-    flow: MinecraftLoginFlow,
+    offline_username: &str,
+    offline_uuid: Option<uuid::Uuid>,
 ) -> crate::Result<Credentials> {
     let state = State::get().await?;
 
-    crate::state::login_finish(code, flow, &state.pool).await
+    crate::state::login_finish(offline_username, offline_uuid, &state.pool).await
 }
 
 #[tracing::instrument]

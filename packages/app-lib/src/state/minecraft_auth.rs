@@ -121,40 +121,28 @@ pub async fn login_begin(
 
 #[tracing::instrument]
 pub async fn login_finish(
-    code: &str,
-    flow: MinecraftLoginFlow,
+    offline_username: &str,
+    offline_uuid: Option<uuid::Uuid>,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
 ) -> crate::Result<Credentials> {
-    let (pair, _) =
-        DeviceTokenPair::refresh_and_get_device_token(Utc::now(), exec).await?;
+    fn hash(src: &[u8]) -> [u8; 16] {
+            use md5::{Digest, Md5};
 
-    let oauth_token = oauth_token(code, &flow.verifier).await?;
-    let sisu_authorize = sisu_authorize(
-        Some(&flow.session_id),
-        &oauth_token.value.access_token,
-        &pair.token.token,
-        &pair.key,
-        oauth_token.date,
-    )
-    .await?;
+            let mut hasher = Md5::new();
 
-    let xbox_token = xsts_authorize(
-        sisu_authorize.value,
-        &pair.token.token,
-        &pair.key,
-        sisu_authorize.date,
-    )
-    .await?;
-    let minecraft_token = minecraft_token(xbox_token.value).await?;
+            hasher.update(src);
 
-    minecraft_entitlements(&minecraft_token.access_token).await?;
+            let mut bytes = [0; 16];
+            bytes.copy_from_slice(&hasher.finalize()[..16]);
+
+            bytes
+        }
 
     let mut credentials = Credentials {
         offline_profile: MinecraftProfile::default(),
-        access_token: minecraft_token.access_token,
-        refresh_token: oauth_token.value.refresh_token,
-        expires: oauth_token.date
-            + Duration::seconds(oauth_token.value.expires_in as i64),
+        access_token: String::from("{MINECRAFT_ACCESS_TOKEN}"),
+        refresh_token: String::new(),
+        expires: DateTime::<Utc>::MAX_UTC,
         active: true,
     };
 
@@ -163,14 +151,15 @@ pub async fn login_finish(
     // profile to make sense. It's also important to modify the returned credentials
     // object, as otherwise continued usage of it will skip the profile cache due to
     // the dummy UUID
-    let online_profile = credentials
-        .online_profile()
-        .await
-        .ok_or(io::Error::other("Failed to fetch player profile"))?;
     credentials.offline_profile = MinecraftProfile {
-        id: online_profile.id,
-        name: online_profile.name.clone(),
-        ..credentials.offline_profile
+        id: offline_uuid.unwrap_or_else(|| uuid::Builder::from_md5_bytes(hash(
+                        ("OfflinePlayer:".to_owned() + offline_username).as_bytes(),
+                    ))
+                    .into_uuid()),
+        name: offline_username.to_string(),
+        capes: Vec::new(),
+        fetch_time: None,
+        skins: Vec::new()
     };
 
     credentials.upsert(exec).await?;
@@ -268,6 +257,7 @@ impl Credentials {
         Ok(())
     }
 
+    #[deprecated = "Since we are now cracked, this shouldn't be used anymore"]
     #[tracing::instrument(skip(self))]
     pub async fn online_profile(&self) -> Option<Arc<MinecraftProfile>> {
         let mut profile_cache = PROFILE_CACHE.lock().await;
@@ -363,9 +353,14 @@ impl Credentials {
     /// falls back to the known offline profile data.
     ///
     /// See also the [`online_profile`](Self::online_profile) method.
+    ///
+    /// **Offline:** Only returns the offline profile if [access_token] is empty.
     pub async fn maybe_online_profile(
         &self,
     ) -> MaybeOnlineMinecraftProfile<'_> {
+        if self.refresh_token.is_empty() {
+            return MaybeOnlineMinecraftProfile::Offline(&self.offline_profile)
+        }
         let online_profile = self.online_profile().await;
         online_profile.map_or_else(
             || MaybeOnlineMinecraftProfile::Offline(&self.offline_profile),

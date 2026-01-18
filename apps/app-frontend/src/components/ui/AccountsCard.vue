@@ -63,7 +63,27 @@
 						<TrashIcon />
 					</Button>
 				</div>
+				<div class="account-row">
+					<Button class="option account" @click="offlineUuidToggle">
+						<DropdownIcon
+							class="ml-auto size-5 transition-transform duration-300 shrink-0"
+							:class="{ '-rotate-90': !offlineUuidShown }"
+						/>
+					</Button>
+					<input v-model="offlineAccountName" type="text" placeholder="Username" />
+					<Button v-tooltip="'Log in'" icon-only @click="login()">
+						<LogInIcon />
+					</Button>
+				</div>
 			</div>
+			<input
+				v-if="offlineUuidShown"
+				ref="offlineUuidInput"
+				v-model="offlineUuid"
+				type="text"
+				placeholder="UUID"
+				pattern="[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+			/>
 			<Button v-if="accounts.length > 0" @click="login()">
 				<PlusIcon />
 				Add account
@@ -75,7 +95,7 @@
 <script setup>
 import { DropdownIcon, LogInIcon, PlusIcon, SpinnerIcon, TrashIcon } from '@modrinth/assets'
 import { Avatar, Button, Card, injectNotificationManager } from '@modrinth/ui'
-import { computed, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 
 import { trackEvent } from '@/helpers/analytics'
 import {
@@ -90,7 +110,7 @@ import { getPlayerHeadUrl } from '@/helpers/rendering/batch-skin-renderer.ts'
 import { get_available_skins } from '@/helpers/skins'
 import { handleSevereError } from '@/store/error.js'
 
-const { handleError } = injectNotificationManager()
+const { handleError, addNotification } = injectNotificationManager()
 
 defineProps({
 	mode: {
@@ -107,6 +127,14 @@ const loginDisabled = ref(false)
 const defaultUser = ref()
 const equippedSkin = ref(null)
 const headUrlCache = ref(new Map())
+const offlineAccountName = ref()
+const offlineUuidShown = ref(false)
+const offlineUuid = ref()
+const offlineUuidInput = useTemplateRef('offlineUuidInput')
+
+function offlineUuidToggle() {
+	offlineUuidShown.value = !offlineUuidShown.value
+}
 
 async function refreshValues() {
 	defaultUser.value = await get_default_user().catch(handleError)
@@ -182,8 +210,19 @@ async function setAccount(account) {
 }
 
 async function login() {
+	if (!offlineUuidInput.value.checkValidity()) {
+		addNotification({
+			title: 'Invalid UUID',
+			text: 'Please enter a valid UUID, or no UUID at all to use an automatically generated one',
+			type: 'warning',
+		})
+		return
+	}
+
 	loginDisabled.value = true
-	const loggedIn = await login_flow().catch(handleSevereError)
+	const loggedIn = await login_flow(offlineAccountName.value, offlineUuid.value || null).catch(
+		handleSevereError,
+	)
 
 	if (loggedIn) {
 		await setAccount(loggedIn)
@@ -225,6 +264,7 @@ function toggleMenu(override = true) {
 	if (showCard.value || !override) {
 		showCard.value = false
 	} else {
+		offlineUuidShown.value = false
 		showCard.value = true
 	}
 }
@@ -348,9 +388,8 @@ onUnmounted(() => {
 	display: flex;
 	flex-direction: row;
 	gap: 0.5rem;
-	vertical-align: center;
+	align-items: center;
 	justify-content: space-between;
-	padding-right: 1rem;
 }
 
 .fade-enter-active,
@@ -474,5 +513,11 @@ onUnmounted(() => {
 		color: var(--color-contrast);
 		padding: 0.5rem 1rem;
 	}
+}
+
+input:invalid {
+	box-shadow:
+		inset 0 0 0 transparent,
+		0 0 0 0.25rem color-mix(in srgb, var(--color-red) 70%, transparent 30%);
 }
 </style>

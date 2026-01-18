@@ -52,6 +52,7 @@ phf = { workspace = true }
 png = { workspace = true }
 quartz_nbt = { workspace = true, features = ["serde"] }
 quick-xml = { workspace = true, features = ["async-tokio"] }
+md-5 = { workspace = true }
 rand = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true, features = [
@@ -105,7 +106,7 @@ tracing = { workspace = true }
 tracing-error = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["chrono", "env-filter"] }
 url = { workspace = true, features = ["serde"] }
-uuid = { workspace = true, features = ["serde", "v4"] }
+uuid = { workspace = true, features = ["serde", "v4", "md5"] }
 whoami = { workspace = true }
 zbus = { workspace = true }
 zip = { workspace = true }

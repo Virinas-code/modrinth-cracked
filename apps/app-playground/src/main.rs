@@ -11,6 +11,8 @@ use theseus::worlds::get_recent_worlds;
 // 1) call the authenticate_begin_flow() function to get the URL to open (like you would in the frontend)
 // 2) open the URL in a browser
 // 3) call the authenticate_await_complete_flow() function to get the credentials (like you would in the frontend)
+#[deprecated = "Doesn't support the new offline crack"]
+#[cfg(false)]
 pub async fn authenticate_run() -> theseus::Result<Credentials> {
     println!("A browser window will now open, follow the login flow there.");
     let login = minecraft_auth::begin_login().await?;

@@ -107,6 +107,7 @@ lettre = { version = "0.11.19", default-features = false, features = [
   "tokio1-rustls",
 ] }
 maxminddb = "0.26.0"
+md-5 = "0.10"
 meilisearch-sdk = { version = "0.30.0", default-features = false }
 modrinth-log = { path = "packages/modrinth-log" }
 modrinth-maxmind = { path = "packages/modrinth-maxmind" }
