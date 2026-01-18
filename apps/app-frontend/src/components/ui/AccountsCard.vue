@@ -210,7 +210,7 @@ async function setAccount(account) {
 }
 
 async function login() {
-	if (!offlineUuidInput.value.checkValidity()) {
+	if (offlineUuidInput.value && !offlineUuidInput.value.checkValidity()) {
 		addNotification({
 			title: 'Invalid UUID',
 			text: 'Please enter a valid UUID, or no UUID at all to use an automatically generated one',
