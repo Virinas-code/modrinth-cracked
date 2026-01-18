@@ -20,7 +20,7 @@
           }) systems
         );
     in
-    {
+    rec {
       packages = forAllSystems (
         system:
         let
@@ -311,7 +311,7 @@
           ];
         in
         {
-          default = pkgs.mkShell {
+          default = pkgs.mkShell rec {
             name = "Desktop App";
             inputsFrom = [
               self.packages."${system}".modrinth-app
@@ -319,7 +319,7 @@
             ];
             TURBO_BINARY_PATH = pkgs.lib.getExe pkgs.turbo;
             TURBO_ENV_MODE = "loose"; # Honestly IDK.
-            buildInputs = jdks;
+            buildInputs = with pkgs; [ rust-analyzer ] ++ jdks;
 
             MODRINTH_URL = "https://modrinth.com/";
             MODRINTH_API_URL = "https://api.modrinth.com/v2/";
@@ -330,6 +330,42 @@
             # https://github.com/tauri-apps/tauri/issues/14187#issuecomment-3299825484
             XDG_DATA_DIRS = "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS";
             GIO_MODULE_DIR = "${pkgs.glib-networking}/lib/gio/modules/";
+
+            # https://wiki.nixos.org/wiki/Rust#Shell.nix_example
+            RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+
+            # https://github.com/NixOS/nixpkgs/issues/60919#issue-440333621
+            hardeningDisable = [ "fortify" ];
+
+            # runtimeDependencies = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux (
+            #   pkgs.lib.makeLibraryPath [
+            #     pkgs.addDriverRunpath.driverLink
+
+            #     # glfw
+            #     pkgs.libGL
+            #     pkgs.xorg.libX11
+            #     pkgs.xorg.libXcursor
+            #     pkgs.xorg.libXext
+            #     pkgs.xorg.libXrandr
+            #     pkgs.xorg.libXxf86vm
+
+            #     # lwjgl
+            #     (pkgs.lib.getLib pkgs.stdenv.cc.cc)
+
+            #     # narrator support
+            #     pkgs.flite
+
+            #     # openal
+            #     pkgs.alsa-lib
+            #     pkgs.libjack2
+            #     pkgs.libpulseaudio
+            #     pkgs.pipewire
+
+            #     # oshi
+            #     pkgs.udev
+            #   ]
+            # );
+            LD_LIBRARY_PATH = "${packages."${system}".modrinth-app.runtimeDependencies}";
           };
         }
       );
